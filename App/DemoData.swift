@@ -6,7 +6,9 @@ import SwiftData
 enum DemoData {
     @MainActor
     static func seed(_ ctx: ModelContext) {
-        ctx.insert(Car(name: "", make: "Volkswagen", modelName: "Golf", year: 2017, startOdometer: 84_000))
+        let car = Car(name: "", make: "Volkswagen", modelName: "Golf", year: 2017, startOdometer: 84_000)
+        car.plate = "M AN 2017"
+        ctx.insert(car)
 
         let cal = Calendar.current
         func day(_ ago: Int) -> Date { cal.date(byAdding: .day, value: -ago, to: .now) ?? .now }

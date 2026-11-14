@@ -9,7 +9,6 @@ struct DashboardView: View {
     @State private var editing: Expense?
     @State private var showCarPhoto = false
     @State private var showOdometer = false
-    @State private var heroCollapsed = false
 
     private var stats: Stats { Stats(car: car, expenses: expenses) }
 
@@ -31,8 +30,7 @@ struct DashboardView: View {
             }
             .defaultScrollAnchor(UserDefaults.standard.string(forKey: "scroll") == "bottom" ? .bottom : .top)
             .background(Color(.systemGroupedBackground))
-            .coordinateSpace(name: "dash")
-            .navigationTitle(heroCollapsed ? car.title : "")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { AddExpenseMenu(trigger: $trigger) }
@@ -57,7 +55,7 @@ struct DashboardView: View {
 
     // Машина владельца сверху: фото без фона + название
     private var carHero: some View {
-        CarHero(car: car, collapsed: $heroCollapsed) { showCarPhoto = true }
+        GarageCard(car: car) { showCarPhoto = true }
     }
 
     private var monthCard: some View {
@@ -261,61 +259,6 @@ struct ExpenseRow: View {
                 .monospacedDigit()
         }
         .contentShape(Rectangle())
-    }
-}
-
-// Шапка с машиной: при прокрутке вниз машина уменьшается и уходит,
-// если потянуть экран вниз — становится крупнее.
-struct CarHero: View {
-    let car: Car
-    @Binding var collapsed: Bool
-    var onTap: () -> Void
-
-    @State private var base: CGFloat?
-    @State private var minY: CGFloat = 0
-
-    private var d: CGFloat { base.map { minY - $0 } ?? 0 }   // >0 — тянут вниз, <0 — прокрутили
-
-    var body: some View {
-        let pull = max(0, d), scroll = min(0, d)
-        let scale = pull > 0 ? 1 + pull / 300 : max(0.45, 1 + scroll / 420)
-        let fade = max(0, 1 + scroll / 260)
-
-        VStack(spacing: 6) {
-            Button(action: onTap) {
-                CarImageView(car: car, height: car.photo == nil ? 140 : 170)
-            }
-            .buttonStyle(.plain)
-            .scaleEffect(scale, anchor: .bottom)
-            .offset(y: -scroll * 0.45)          // уезжает медленнее, чем страница — эффект глубины
-            .opacity(Double(fade))
-
-            Group {
-                Text(car.title)
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                    .multilineTextAlignment(.center)
-                if !car.subtitle.isEmpty {
-                    Text(car.subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .opacity(Double(max(0, 1 + scroll / 180)))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.bottom, 4)
-        .background(
-            GeometryReader { g in
-                let y = g.frame(in: .named("dash")).minY
-                Color.clear
-                    .onAppear { minY = y; if base == nil { base = y } }
-                    .onChange(of: y) { _, v in
-                        minY = v
-                        let c = v - (base ?? v) < -200
-                        if c != collapsed { withAnimation(.easeInOut(duration: 0.2)) { collapsed = c } }
-                    }
-            }
-        )
     }
 }
 

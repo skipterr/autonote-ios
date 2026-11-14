@@ -66,7 +66,7 @@ struct CarPhotoSheet: View {
                 CarImageView(car: car, height: 180)
                     .padding(.top, 8)
 
-                Text("Сфоткай свою машину сбоку или спереди. Фон вырежется, а номера размоются — сразу на телефоне.")
+                Text("Лучше всего смотрится фото **сбоку**, как в каталоге. Фон вырежется, а номер закрасится — прямо на телефоне.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -119,7 +119,7 @@ struct CarPhotoSheet: View {
                 Spacer()
             } else {
                 ScrollView {
-                    Text("Выбери фото, где машина видна целиком и стоит одна")
+                    Text("Выбери фото, где машина видна сбоку целиком и стоит одна")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
@@ -174,7 +174,7 @@ struct CarPhotoSheet: View {
                 .frame(maxHeight: 240)
                 .shadow(color: .black.opacity(0.25), radius: 14, y: 10)
                 .padding(.horizontal)
-            Label(plates > 0 ? "Номера размыты: \(plates)" : "Номеров на фото не нашёл",
+            Label(plates > 0 ? "Номер закрашен" : "Номеров на фото не нашёл",
                   systemImage: plates > 0 ? "checkmark.shield.fill" : "info.circle")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
