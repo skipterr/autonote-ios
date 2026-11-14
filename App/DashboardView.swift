@@ -288,7 +288,7 @@ struct CarHero: View {
             .buttonStyle(.plain)
             .scaleEffect(scale, anchor: .bottom)
             .offset(y: -scroll * 0.45)          // уезжает медленнее, чем страница — эффект глубины
-            .opacity(fade)
+            .opacity(Double(fade))
 
             Group {
                 Text(car.title)
@@ -300,7 +300,7 @@ struct CarHero: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .opacity(max(0, 1 + scroll / 180))
+            .opacity(Double(max(0, 1 + scroll / 180)))
         }
         .frame(maxWidth: .infinity)
         .padding(.bottom, 4)
