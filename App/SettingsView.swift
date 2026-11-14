@@ -70,6 +70,7 @@ struct SettingsView: View {
             }
             .navigationTitle("Настройки")
             .scrollDismissesKeyboard(.interactively)
+            .keyboardDoneButton()
             .onAppear {
                 odoText = String(car.startOdometer)
                 yearText = car.year > 0 ? String(car.year) : ""

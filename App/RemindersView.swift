@@ -202,6 +202,7 @@ struct ReminderEditor: View {
                     }
                 }
             }
+            .keyboardDoneButton()
             .navigationTitle(reminder == nil ? "Новое напоминание" : "Напоминание")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

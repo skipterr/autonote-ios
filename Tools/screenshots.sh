@@ -47,6 +47,10 @@ for mode in light dark; do
   shot "$mode-6-onboarding" -demo YES -onboarding YES
 done
 
+# знакомство с открытой клавиатурой (поле года)
+xcrun simctl ui "$UDID" appearance dark
+shot "dark-7-onboarding-typing" -demo YES -onboarding YES -focus year
+
 # главная, прокрученная вниз
 xcrun simctl ui "$UDID" appearance light
 xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE" "${LOCALE[@]}" -demo YES -tab 0 -scroll bottom >/dev/null

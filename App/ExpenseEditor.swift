@@ -147,6 +147,7 @@ struct ExpenseEditor: View {
                 }
             }
             .scrollDismissesKeyboard(.interactively)
+            .keyboardDoneButton()
             .navigationTitle(existing == nil ? "Новый расход" : "Расход")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
