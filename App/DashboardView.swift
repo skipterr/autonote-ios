@@ -24,6 +24,7 @@ struct DashboardView: View {
                 }
                 .padding()
             }
+            .defaultScrollAnchor(UserDefaults.standard.string(forKey: "scroll") == "bottom" ? .bottom : .top)
             .background(Color(.systemGroupedBackground))
             .navigationTitle(car.title)
             .toolbar {
@@ -32,6 +33,10 @@ struct DashboardView: View {
             .addExpenseFlow(trigger: $trigger, currentOdometer: stats.currentOdometer)
             .sheet(item: $editing) { e in
                 ExpenseEditor(source: .manual, currentOdometer: stats.currentOdometer, existing: e)
+            }
+            .onAppear {
+                // для скриншотов: `-sheet editor` сразу открывает карточку расхода
+                if UserDefaults.standard.string(forKey: "sheet") == "editor" { editing = expenses.first }
             }
         }
     }

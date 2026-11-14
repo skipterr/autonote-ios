@@ -48,3 +48,33 @@ jobs:
         with:
           name: icon-preview
           path: App/Assets.xcassets/AppIcon.appiconset/icon.png
+
+  # Скриншоты всех экранов в симуляторе (светлая и тёмная тема) — чтобы проверять дизайн без телефона
+  screenshots:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Render app icon
+        run: |
+          xcrun --sdk macosx swiftc -parse-as-library -O Tools/RenderIcon.swift -o render
+          ./render App/Assets.xcassets/AppIcon.appiconset/icon.png
+
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Build for simulator
+        run: |
+          xcodebuild -project AutoNote.xcodeproj -target AutoNote -configuration Release -sdk iphonesimulator \
+            ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build
+
+      - name: Take screenshots
+        run: bash Tools/screenshots.sh build/Release-iphonesimulator/AutoNote.app shots
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: shots
