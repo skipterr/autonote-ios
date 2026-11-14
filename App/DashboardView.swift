@@ -7,7 +7,6 @@ struct DashboardView: View {
     @Query(filter: #Predicate<Reminder> { !$0.done }) private var reminders: [Reminder]
     @State private var trigger: AddTrigger?
     @State private var editing: Expense?
-    @State private var showCarPhoto = false
     @State private var showOdometer = false
 
     private var stats: Stats { Stats(car: car, expenses: expenses) }
@@ -39,13 +38,11 @@ struct DashboardView: View {
             .sheet(item: $editing) { e in
                 ExpenseEditor(source: .manual, currentOdometer: stats.currentOdometer, existing: e)
             }
-            .sheet(isPresented: $showCarPhoto) { CarPhotoSheet(car: car) }
             .sheet(isPresented: $showOdometer) { OdometerSheet(car: car, current: stats.currentOdometer) }
             .onAppear {
                 // для скриншотов: `-sheet editor` сразу открывает карточку расхода
                 let sheet = UserDefaults.standard.string(forKey: "sheet")
                 if sheet == "editor" { editing = expenses.first }
-                if sheet == "carphoto" { showCarPhoto = true }
                 if sheet == "odometer" { showOdometer = true }
             }
         }
@@ -55,7 +52,7 @@ struct DashboardView: View {
 
     // Машина владельца сверху: фото без фона + название
     private var carHero: some View {
-        GarageCard(car: car) { showCarPhoto = true }
+        GarageCard(car: car)
     }
 
     private var monthCard: some View {

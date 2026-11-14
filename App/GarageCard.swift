@@ -1,12 +1,14 @@
 import SwiftUI
 
 // Карточка «гаража» сверху главной: название, номер в плашке и машина сбоку.
+// Картинка подбирается сама по марке и модели; нажми на неё — покажет другой вариант.
 struct GarageCard: View {
     @Bindable var car: Car
-    var onPhoto: () -> Void
 
     @State private var editingPlate = false
     @State private var plateText = ""
+    @State private var loading = false
+    @State private var notFound = false
 
     var body: some View {
         VStack(spacing: 6) {
@@ -37,28 +39,39 @@ struct GarageCard: View {
             }
             .buttonStyle(.plain)
 
-            Button(action: onPhoto) {
-                if let data = car.photo, let img = UIImage(data: data) {
-                    Image(uiImage: img)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 120)
-                        .frame(maxWidth: .infinity)
-                        .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 8)
-                } else {
-                    VStack(spacing: 6) {
+            Button {
+                Task { await load(skip: (car.photoVariant ?? 0) + 1) }
+            } label: {
+                ZStack {
+                    if let data = car.photo, let img = UIImage(data: data) {
+                        Image(uiImage: img)
+                            .resizable()
+                            .scaledToFit()
+                            .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 8)
+                            .opacity(loading ? 0.35 : 1)
+                    } else {
                         Image(systemName: "car.side.fill")
-                            .font(.system(size: 48))
-                            .foregroundStyle(Color.secondary.opacity(0.45))
-                        Text("Добавить фото машины")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(Color.accentColor)
+                            .font(.system(size: 54))
+                            .foregroundStyle(Color.secondary.opacity(0.35))
                     }
-                    .frame(height: 120)
-                    .frame(maxWidth: .infinity)
+                    if loading {
+                        VStack(spacing: 6) {
+                            ProgressView()
+                            Text("Подбираю картинку…").font(.caption2).foregroundStyle(.secondary)
+                        }
+                    } else if notFound && car.photo == nil {
+                        Text("Картинка не нашлась — нажми, чтобы попробовать ещё")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .offset(y: 44)
+                    }
                 }
+                .frame(height: 120)
+                .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)
+            .disabled(loading)
             .padding(.horizontal, 16)
             .padding(.bottom, 14)
         }
@@ -68,6 +81,13 @@ struct GarageCard: View {
                            startPoint: .top, endPoint: .bottom),
             in: RoundedRectangle(cornerRadius: 22)
         )
+        // картинка подбирается сама, когда её ещё нет или сменили марку/модель
+        .task(id: "\(car.make)|\(car.modelName)") {
+            if car.photo == nil && !UserDefaults.standard.bool(forKey: "demo") {
+                try? await Task.sleep(for: .seconds(1))   // ждём, пока человек допечатает
+                await load(skip: car.photoVariant ?? 0)
+            }
+        }
         .alert("Госномер", isPresented: $editingPlate) {
             TextField("Например, M AB 1234", text: $plateText)
                 .textInputAutocapitalization(.characters)
@@ -77,8 +97,25 @@ struct GarageCard: View {
                 car.plate = p.isEmpty ? nil : p
             }
             Button("Отмена", role: .cancel) {}
-        } message: {
-            Text("Номер видно только тебе — на фото он всё равно закрашивается.")
+        }
+    }
+
+    private func load(skip: Int) async {
+        guard !loading, !Task.isCancelled else { return }
+        loading = true
+        defer { loading = false }
+        var img = await CarArtwork.find(make: car.make, model: car.modelName, skip: skip)
+        var used = skip
+        if img == nil && skip > 0 {          // варианты кончились — по кругу к первому
+            img = await CarArtwork.find(make: car.make, model: car.modelName, skip: 0)
+            used = 0
+        }
+        if let img {
+            car.photo = img.pngData()
+            car.photoVariant = used
+            notFound = false
+        } else {
+            notFound = true
         }
     }
 }

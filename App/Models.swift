@@ -15,6 +15,7 @@ final class Car {
     @Attribute(.externalStorage) var photo: Data?   // машина без фона (PNG) для главной
     var lastKnownOdometer: Int?                     // пробег, записанный отдельно (без расхода)
     var plate: String?                              // госномер — показываем текстом в плашке
+    var photoVariant: Int?                          // какой по счёту вариант картинки выбран
 
     init(name: String, make: String, modelName: String, year: Int, startOdometer: Int) {
         self.name = name

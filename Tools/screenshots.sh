@@ -49,7 +49,6 @@ done
 
 # новые экраны: фото машины и постоянный платёж
 xcrun simctl ui "$UDID" appearance light
-shot "light-8-carphoto" -demo YES -tab 0 -sheet carphoto
 shot "light-9-payment" -demo YES -tab 0 -sheet payment
 shot "light-10-odometer" -demo YES -tab 0 -sheet odometer
 shot "light-11-welcome1" -demo YES -onboarding YES -welcomePage 0

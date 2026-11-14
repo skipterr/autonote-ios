@@ -9,13 +9,21 @@ struct SettingsView: View {
     @State private var yearText = ""
     @State private var showWelcome = false
 
+    // сменили марку или модель — картинка в гараже подберётся заново
+    private func resetArtwork() {
+        car.photo = nil
+        car.photoVariant = nil
+    }
+
     var body: some View {
         NavigationStack {
             Form {
                 Section("Машина") {
                     TextField("Как зовёшь машину", text: $car.name)
                     TextField("Марка", text: $car.make)
+                        .onChange(of: car.make) { _, _ in resetArtwork() }
                     TextField("Модель", text: $car.modelName)
+                        .onChange(of: car.modelName) { _, _ in resetArtwork() }
                     HStack {
                         Text("Год")
                         TextField("—", text: $yearText)
