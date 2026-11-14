@@ -1,0 +1,8 @@
+AutoNote.xcodeproj/
+build/
+Payload/
+*.ipa
+App/Info.plist
+App/Assets.xcassets/AppIcon.appiconset/icon.png
+render
+.DS_Store

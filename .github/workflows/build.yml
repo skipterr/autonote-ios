@@ -1,0 +1,50 @@
+name: Build IPA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  APP_VERSION: 1.${{ github.run_number }}
+
+jobs:
+  build:
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Render app icon
+        run: |
+          xcrun --sdk macosx swiftc -parse-as-library -O Tools/RenderIcon.swift -o render
+          ./render App/Assets.xcassets/AppIcon.appiconset/icon.png
+
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Build (unsigned)
+        run: |
+          xcodebuild -project AutoNote.xcodeproj -target AutoNote -configuration Release -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+
+      - name: Package IPA
+        run: |
+          # AltStore переподпишет своим Apple ID; номер сборки — чтобы было видно, что это обновление
+          APP=build/Release-iphoneos/AutoNote.app
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP_VERSION" "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" "$APP/Info.plist"
+          mkdir Payload
+          cp -R "$APP" Payload/
+          zip -qry AutoNote.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AutoNote-ipa
+          path: AutoNote.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: icon-preview
+          path: App/Assets.xcassets/AppIcon.appiconset/icon.png
