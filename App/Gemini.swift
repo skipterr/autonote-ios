@@ -117,6 +117,89 @@ enum Gemini {
         throw GeminiError.failed(lastErr)
     }
 
+    // MARK: Рисование машины для гаража
+
+    // Модели, которые умеют рисовать; если какой-то нет — пробуем следующую
+    static let imageModels = ["gemini-3.1-flash-image-preview", "gemini-3-pro-image-preview",
+                              "gemini-2.5-flash-image", "gemini-2.5-flash-image-preview"]
+
+    static func drawCar(make: String, model: String, year: Int, color: CarColor) async throws -> UIImage {
+        guard let key = KeyVault.load() else { throw GeminiError.noKey }
+        let yearText = year > 0 ? "\(year) " : ""
+        let prompt = """
+        Photorealistic studio catalog render of a \(yearText)\(make) \(model) car, \(color.prompt) paint. \
+        Exact side profile view, perfectly from the side, front of the car pointing to the right. \
+        The whole car is visible and centered with some margin. No license plate numbers, no text, no watermark, \
+        no people. Plain seamless light grey studio background, soft even lighting, subtle soft shadow under the wheels. \
+        Accurate body shape and generation for that model year.
+        """
+        var withAspect = true
+        var queue = imageModels
+        var tried = Set<String>()
+        var lastErr = "Gemini не смог нарисовать машину"
+        var sawQuota = false
+
+        while !queue.isEmpty {
+            let m = queue.removeFirst()
+            if tried.contains(m) { continue }
+            tried.insert(m)
+
+            var config: [String: Any] = ["responseModalities": ["IMAGE"]]
+            if withAspect { config["imageConfig"] = ["aspectRatio": "16:9"] }
+            let body: [String: Any] = ["contents": [["parts": [["text": prompt]]]], "generationConfig": config]
+
+            var req = URLRequest(url: URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(m):generateContent")!)
+            req.httpMethod = "POST"
+            req.timeoutInterval = 90
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.setValue(key, forHTTPHeaderField: "x-goog-api-key")
+            req.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+            guard let result = try? await URLSession.shared.data(for: req) else {
+                lastErr = "Нет связи с Gemini"
+                continue
+            }
+            let data = result.0
+            let status = (result.1 as? HTTPURLResponse)?.statusCode ?? 0
+            let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            let message = ((json?["error"] as? [String: Any])?["message"] as? String) ?? ""
+
+            // модель не знает настройку пропорций — повторяем без неё
+            if status == 400 && withAspect && (message.contains("imageConfig") || message.contains("aspect")) {
+                withAspect = false
+                tried.remove(m)
+                queue.insert(m, at: 0)
+                continue
+            }
+            if status == 404 || (status == 400 && message.lowercased().contains("not supported")) {
+                lastErr = "Нет модели \(m)"
+                continue
+            }
+            if status == 429 {
+                sawQuota = true
+                lastErr = message
+                continue
+            }
+            if status != 200 {
+                lastErr = message.isEmpty ? "Ошибка Gemini \(status)" : message
+                continue
+            }
+
+            let parts = (((json?["candidates"] as? [[String: Any]])?.first?["content"] as? [String: Any])?["parts"] as? [[String: Any]]) ?? []
+            for p in parts {
+                let inline = (p["inlineData"] ?? p["inline_data"]) as? [String: Any]
+                if let b64 = inline?["data"] as? String, let d = Data(base64Encoded: b64), let img = UIImage(data: d) {
+                    return img
+                }
+            }
+            lastErr = "Gemini ответил без картинки"
+        }
+        if sawQuota {
+            throw GeminiError.failed("Google не дал нарисовать картинку — похоже, на бесплатном ключе рисование ограничено. Попробуй позже.")
+        }
+        throw GeminiError.failed(lastErr)
+    }
+
     // Разбираем ответ «мягко»: числа могут прийти строкой, с запятой, с «€».
     private static func decode(_ raw: String) -> ParsedExpense {
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)

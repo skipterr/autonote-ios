@@ -24,6 +24,11 @@ struct SettingsView: View {
                         .onChange(of: car.make) { _, _ in resetArtwork() }
                     TextField("Модель", text: $car.modelName)
                         .onChange(of: car.modelName) { _, _ in resetArtwork() }
+                    Picker("Цвет", selection: Binding(get: { car.color }, set: { car.color = $0; resetArtwork() })) {
+                        ForEach(CarColor.allCases) { c in
+                            Text(c.title).tag(c)
+                        }
+                    }
                     HStack {
                         Text("Год")
                         TextField("—", text: $yearText)

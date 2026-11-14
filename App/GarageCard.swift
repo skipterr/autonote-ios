@@ -1,14 +1,14 @@
 import SwiftUI
 
 // Карточка «гаража» сверху главной: название, номер в плашке и машина сбоку.
-// Картинка подбирается сама по марке и модели; нажми на неё — покажет другой вариант.
+// Машину рисует Gemini по марке, модели, году и цвету; нажми на неё — меню.
 struct GarageCard: View {
     @Bindable var car: Car
 
     @State private var editingPlate = false
     @State private var plateText = ""
     @State private var loading = false
-    @State private var notFound = false
+    @State private var errorText: String?
 
     var body: some View {
         VStack(spacing: 6) {
@@ -39,38 +39,26 @@ struct GarageCard: View {
             }
             .buttonStyle(.plain)
 
-            Button {
-                Task { await load(skip: (car.photoVariant ?? 0) + 1) }
-            } label: {
-                ZStack {
-                    if let data = car.photo, let img = UIImage(data: data) {
-                        Image(uiImage: img)
-                            .resizable()
-                            .scaledToFit()
-                            .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 8)
-                            .opacity(loading ? 0.35 : 1)
-                    } else {
-                        Image(systemName: "car.side.fill")
-                            .font(.system(size: 54))
-                            .foregroundStyle(Color.secondary.opacity(0.35))
-                    }
-                    if loading {
-                        VStack(spacing: 6) {
-                            ProgressView()
-                            Text("Подбираю картинку…").font(.caption2).foregroundStyle(.secondary)
-                        }
-                    } else if notFound && car.photo == nil {
-                        Text("Картинка не нашлась — нажми, чтобы попробовать ещё")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .offset(y: 44)
-                    }
+            Menu {
+                Button {
+                    Task { await draw() }
+                } label: {
+                    Label("Нарисовать заново", systemImage: "arrow.clockwise")
                 }
-                .frame(height: 120)
-                .frame(maxWidth: .infinity)
+                Picker(selection: Binding(get: { car.color }, set: { c in
+                    car.color = c
+                    Task { await draw() }
+                })) {
+                    ForEach(CarColor.allCases) { c in
+                        Text(c.title).tag(c)
+                    }
+                } label: {
+                    Label("Цвет: \(car.color.title)", systemImage: "paintpalette")
+                }
+                .pickerStyle(.menu)
+            } label: {
+                artwork
             }
-            .buttonStyle(.plain)
             .disabled(loading)
             .padding(.horizontal, 16)
             .padding(.bottom, 14)
@@ -81,11 +69,11 @@ struct GarageCard: View {
                            startPoint: .top, endPoint: .bottom),
             in: RoundedRectangle(cornerRadius: 22)
         )
-        // картинка подбирается сама, когда её ещё нет или сменили марку/модель
-        .task(id: "\(car.make)|\(car.modelName)") {
-            if car.photo == nil && !UserDefaults.standard.bool(forKey: "demo") {
+        // рисуем сами, когда картинки ещё нет или сменили марку/модель/цвет
+        .task(id: "\(car.make)|\(car.modelName)|\(car.year)") {
+            if car.photo == nil && KeyVault.hasKey && !UserDefaults.standard.bool(forKey: "demo") {
                 try? await Task.sleep(for: .seconds(1))   // ждём, пока человек допечатает
-                await load(skip: car.photoVariant ?? 0)
+                if !Task.isCancelled { await draw() }
             }
         }
         .alert("Госномер", isPresented: $editingPlate) {
@@ -100,22 +88,50 @@ struct GarageCard: View {
         }
     }
 
-    private func load(skip: Int) async {
-        guard !loading, !Task.isCancelled else { return }
-        loading = true
-        defer { loading = false }
-        var img = await CarArtwork.find(make: car.make, model: car.modelName, skip: skip)
-        var used = skip
-        if img == nil && skip > 0 {          // варианты кончились — по кругу к первому
-            img = await CarArtwork.find(make: car.make, model: car.modelName, skip: 0)
-            used = 0
+    private var artwork: some View {
+        ZStack {
+            if let data = car.photo, let img = UIImage(data: data) {
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFit()
+                    .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 8)
+                    .opacity(loading ? 0.3 : 1)
+            } else {
+                Image(systemName: "car.side.fill")
+                    .font(.system(size: 54))
+                    .foregroundStyle(car.color.swatch.opacity(0.55))
+                    .opacity(loading ? 0.3 : 1)
+            }
+            if loading {
+                VStack(spacing: 6) {
+                    ProgressView()
+                    Text("Рисую твою машину…").font(.caption2).foregroundStyle(.secondary)
+                }
+            } else if car.photo == nil || errorText != nil {
+                Text(errorText ?? (KeyVault.hasKey ? "Нажми, чтобы нарисовать свою машину"
+                                                   : "Добавь ключ Gemini в Настройках — и я нарисую твою машину"))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+                    .offset(y: 46)
+            }
         }
-        if let img {
+        .frame(height: 120)
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+    }
+
+    private func draw() async {
+        guard !loading, !car.make.trimmed.isEmpty else { return }
+        loading = true
+        errorText = nil
+        defer { loading = false }
+        do {
+            let img = try await CarArtwork.draw(make: car.make, model: car.modelName, year: car.year, color: car.color)
             car.photo = img.pngData()
-            car.photoVariant = used
-            notFound = false
-        } else {
-            notFound = true
+        } catch {
+            errorText = (error as? LocalizedError)?.errorDescription ?? "Не получилось нарисовать машину"
         }
     }
 }

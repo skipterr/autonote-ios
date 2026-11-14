@@ -16,6 +16,12 @@ final class Car {
     var lastKnownOdometer: Int?                     // пробег, записанный отдельно (без расхода)
     var plate: String?                              // госномер — показываем текстом в плашке
     var photoVariant: Int?                          // какой по счёту вариант картинки выбран
+    var colorRaw: String?                           // цвет машины — для картинки
+
+    var color: CarColor {
+        get { colorRaw.flatMap(CarColor.init(rawValue:)) ?? .graphite }
+        set { colorRaw = newValue.rawValue }
+    }
 
     init(name: String, make: String, modelName: String, year: Int, startOdometer: Int) {
         self.name = name
