@@ -117,7 +117,7 @@ struct DashboardView: View {
                  hint: s.fuelConsumption == nil ? "нужно 2 заправки с пробегом" : "на 100 км", icon: "fuelpump")
             tile("В среднем в месяц", s.monthlyAverage.map { Fmt.money($0, decimals: 0) } ?? "—",
                  hint: "с начала учёта", icon: "calendar")
-            tile("Проехал", Fmt.km(s.kmDriven), hint: "с начала учёта", icon: "road.lanes")
+            tile("Проехал", Fmt.km(s.kmDriven), hint: "с начала учёта", icon: "flag.checkered")
         }
     }
 
