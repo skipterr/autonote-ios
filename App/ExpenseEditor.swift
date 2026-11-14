@@ -24,7 +24,10 @@ struct ExpenseEditor: View {
 
     private var amount: Double? { Double.parseLoose(amountText) }
     private var liters: Double? { Double.parseLoose(litersText) }
-    private var odometer: Int? { Int(odoText.filter(\.isNumber)) }
+    @State private var odoMode: OdometerMode = .total
+    // у старой записи «+км» считаем от текущего пробега без неё самой
+    private var baseOdometer: Int { currentOdometer }
+    private var odometer: Int? { OdometerField.result(text: odoText, mode: odoMode, current: baseOdometer) }
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
 
@@ -108,13 +111,7 @@ struct ExpenseEditor: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    HStack {
-                        Text("Пробег")
-                        TextField(currentOdometer > 0 ? "сейчас ~\(currentOdometer)" : "необязательно", text: $odoText)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                        Text("км").foregroundStyle(.secondary)
-                    }
+                    OdometerField(text: $odoText, mode: $odoMode, current: baseOdometer)
                     HStack {
                         Text("Заметка")
                         TextField("Shell, колодки…", text: $note)
@@ -185,6 +182,7 @@ struct ExpenseEditor: View {
             photo = e.photo.flatMap(UIImage.init(data:))
             return
         }
+        odoMode = .delta   // для новой записи удобнее «сколько проехал»
 
         parsing = true
         defer { parsing = false }
@@ -210,7 +208,15 @@ struct ExpenseEditor: View {
         if let c = p.category { category = c }
         if let a = p.amount { amountText = Fmt.number(a, decimals: 2) }
         if let l = p.liters { litersText = Fmt.number(l, decimals: 2) }
-        if let o = p.odometer { odoText = String(o) }
+        if let o = p.odometer {
+            // Gemini понимает и «пробег 84 300», и «проехал 375»: маленькое число — это прибавка
+            if o < 5000 && currentOdometer > o * 3 {
+                odoMode = .delta
+            } else {
+                odoMode = .total
+            }
+            odoText = String(o)
+        }
         if let d = p.date { date = d }
         if let n = p.note { note = n }
         filledByAI = p.amount != nil || p.category != nil

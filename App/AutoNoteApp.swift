@@ -10,7 +10,8 @@ struct AutoNoteApp: App {
         let demo = UserDefaults.standard.bool(forKey: "demo")
         let config = ModelConfiguration(isStoredInMemoryOnly: demo)
         do {
-            container = try ModelContainer(for: Car.self, Expense.self, Reminder.self, configurations: config)
+            container = try ModelContainer(for: Car.self, Expense.self, Reminder.self, RecurringPayment.self,
+                                           configurations: config)
         } catch {
             fatalError("Не получилось открыть базу: \(error)")
         }
@@ -28,8 +29,11 @@ struct AutoNoteApp: App {
 }
 
 struct RootView: View {
+    @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \Car.createdAt) private var cars: [Car]
     @State private var tab = UserDefaults.standard.integer(forKey: "tab")
+    @AppStorage("welcomeSeen") private var welcomeSeen = false
 
     var body: some View {
         if let car = cars.first {
@@ -47,8 +51,15 @@ struct RootView: View {
                     .tabItem { Label("Настройки", systemImage: "gearshape") }
                     .tag(3)
             }
-        } else {
+            // постоянные платежи, день которых наступил, сами попадают в историю
+            .onAppear { Recurring.catchUp(context) }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { Recurring.catchUp(context) }
+            }
+        } else if welcomeSeen {
             OnboardingView()
+        } else {
+            WelcomeView { withAnimation { welcomeSeen = true } }
         }
     }
 }

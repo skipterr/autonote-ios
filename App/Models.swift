@@ -12,6 +12,8 @@ final class Car {
     var year: Int
     var startOdometer: Int    // пробег, когда начали вести учёт
     var createdAt: Date
+    @Attribute(.externalStorage) var photo: Data?   // машина без фона (PNG) для главной
+    var lastKnownOdometer: Int?                     // пробег, записанный отдельно (без расхода)
 
     init(name: String, make: String, modelName: String, year: Int, startOdometer: Int) {
         self.name = name
@@ -27,12 +29,21 @@ final class Car {
         if name.isEmpty { return full.isEmpty ? "Моя машина" : full }
         return name
     }
+
+    // «Audi A3 · 2017» — строка под названием на главной
+    var subtitle: String {
+        var parts: [String] = []
+        let full = [make, modelName].filter { !$0.isEmpty }.joined(separator: " ")
+        if !name.isEmpty && !full.isEmpty { parts.append(full) }
+        if year > 0 { parts.append(String(year)) }
+        return parts.joined(separator: " · ")
+    }
 }
 
 // MARK: - Расход
 
 enum ExpenseCategory: String, CaseIterable, Identifiable, Codable {
-    case fuel, service, repair, tires, wash, insurance, tax, parking, fines, other
+    case fuel, service, repair, tires, wash, insurance, tax, loan, parking, fines, other
 
     var id: String { rawValue }
 
@@ -45,6 +56,7 @@ enum ExpenseCategory: String, CaseIterable, Identifiable, Codable {
         case .wash: "Мойка"
         case .insurance: "Страховка"
         case .tax: "Налог"
+        case .loan: "Кредит"
         case .parking: "Парковка"
         case .fines: "Штрафы"
         case .other: "Другое"
@@ -60,6 +72,7 @@ enum ExpenseCategory: String, CaseIterable, Identifiable, Codable {
         case .wash: "drop.fill"
         case .insurance: "shield.fill"
         case .tax: "building.columns.fill"
+        case .loan: "creditcard.fill"
         case .parking: "parkingsign.circle.fill"
         case .fines: "exclamationmark.triangle.fill"
         case .other: "ellipsis.circle.fill"
@@ -75,6 +88,7 @@ enum ExpenseCategory: String, CaseIterable, Identifiable, Codable {
         case .wash: .cyan
         case .insurance: .indigo
         case .tax: .brown
+        case .loan: .teal
         case .parking: .purple
         case .fines: .pink
         case .other: .secondary

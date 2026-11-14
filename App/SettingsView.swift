@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var hasKey = KeyVault.hasKey
     @State private var odoText = ""
     @State private var yearText = ""
+    @State private var showWelcome = false
 
     var body: some View {
         NavigationStack {
@@ -61,6 +62,9 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Button { showWelcome = true } label: {
+                        Label("Как пользоваться", systemImage: "sparkles.rectangle.stack")
+                    }
                     LabeledContent("Версия", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
                 } footer: {
                     Text("AutoNote · Your car — your price")
@@ -71,6 +75,7 @@ struct SettingsView: View {
             .navigationTitle("Настройки")
             .scrollDismissesKeyboard(.interactively)
             .keyboardDoneButton()
+            .fullScreenCover(isPresented: $showWelcome) { WelcomeView { showWelcome = false } }
             .onAppear {
                 odoText = String(car.startOdometer)
                 yearText = car.year > 0 ? String(car.year) : ""

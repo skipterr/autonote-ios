@@ -35,6 +35,11 @@ enum DemoData {
         ctx.insert(Reminder(title: "ТО", kind: .service, dueDate: nil, dueOdometer: 100_000))
         ctx.insert(Reminder(title: "Страховка", kind: .insurance,
                             dueDate: cal.date(byAdding: .month, value: 4, to: .now), dueOdometer: nil))
+        let firstOfNext = cal.date(from: cal.dateComponents([.year, .month], from: cal.date(byAdding: .month, value: 1, to: .now) ?? .now)) ?? .now
+        ctx.insert(RecurringPayment(title: "Страховка HUK", category: .insurance, amount: 57,
+                                    period: .monthly, startDate: firstOfNext))
+        ctx.insert(RecurringPayment(title: "Налог на авто", category: .tax, amount: 146,
+                                    period: .yearly, startDate: cal.date(byAdding: .month, value: 3, to: .now) ?? .now))
         try? ctx.save()
     }
 }

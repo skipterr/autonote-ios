@@ -6,7 +6,7 @@ struct Stats {
     let expenses: [Expense]
 
     var currentOdometer: Int {
-        max(car?.startOdometer ?? 0, expenses.compactMap(\.odometer).max() ?? 0)
+        max(car?.startOdometer ?? 0, expenses.compactMap(\.odometer).max() ?? 0, car?.lastKnownOdometer ?? 0)
     }
 
     var total: Double { expenses.reduce(0) { $0 + $1.amount } }

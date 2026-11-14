@@ -44,12 +44,22 @@ for mode in light dark; do
   shot "$mode-3-reminders" -demo YES -tab 2
   shot "$mode-4-settings"  -demo YES -tab 3
   shot "$mode-5-editor"    -demo YES -tab 0 -sheet editor
-  shot "$mode-6-onboarding" -demo YES -onboarding YES
+  shot "$mode-6-onboarding" -demo YES -onboarding YES -welcomeSeen YES
 done
+
+# новые экраны: фото машины и постоянный платёж
+xcrun simctl ui "$UDID" appearance light
+shot "light-8-carphoto" -demo YES -tab 0 -sheet carphoto
+shot "light-9-payment" -demo YES -tab 0 -sheet payment
+shot "light-10-odometer" -demo YES -tab 0 -sheet odometer
+shot "light-11-welcome1" -demo YES -onboarding YES -welcomePage 0
+shot "light-12-welcome2" -demo YES -onboarding YES -welcomePage 1
+xcrun simctl ui "$UDID" appearance dark
+shot "dark-13-welcome5" -demo YES -onboarding YES -welcomePage 4
 
 # знакомство с открытой клавиатурой (поле года)
 xcrun simctl ui "$UDID" appearance dark
-shot "dark-7-onboarding-typing" -demo YES -onboarding YES -focus year
+shot "dark-7-onboarding-typing" -demo YES -onboarding YES -welcomeSeen YES -focus year
 
 # главная, прокрученная вниз
 xcrun simctl ui "$UDID" appearance light

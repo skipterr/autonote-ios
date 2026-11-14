@@ -7,6 +7,8 @@ struct DashboardView: View {
     @Query(filter: #Predicate<Reminder> { !$0.done }) private var reminders: [Reminder]
     @State private var trigger: AddTrigger?
     @State private var editing: Expense?
+    @State private var showCarPhoto = false
+    @State private var showOdometer = false
 
     private var stats: Stats { Stats(car: car, expenses: expenses) }
 
@@ -14,10 +16,12 @@ struct DashboardView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
+                    carHero
                     monthCard
                     addButtons
                     if !KeyVault.hasKey { keyHint }
                     statsGrid
+                    RecurringCard()
                     remindersBlock
                     categoriesBlock
                     recentBlock
@@ -26,7 +30,8 @@ struct DashboardView: View {
             }
             .defaultScrollAnchor(UserDefaults.standard.string(forKey: "scroll") == "bottom" ? .bottom : .top)
             .background(Color(.systemGroupedBackground))
-            .navigationTitle(car.title)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { AddExpenseMenu(trigger: $trigger) }
             }
@@ -34,14 +39,39 @@ struct DashboardView: View {
             .sheet(item: $editing) { e in
                 ExpenseEditor(source: .manual, currentOdometer: stats.currentOdometer, existing: e)
             }
+            .sheet(isPresented: $showCarPhoto) { CarPhotoSheet(car: car) }
+            .sheet(isPresented: $showOdometer) { OdometerSheet(car: car, current: stats.currentOdometer) }
             .onAppear {
                 // для скриншотов: `-sheet editor` сразу открывает карточку расхода
-                if UserDefaults.standard.string(forKey: "sheet") == "editor" { editing = expenses.first }
+                let sheet = UserDefaults.standard.string(forKey: "sheet")
+                if sheet == "editor" { editing = expenses.first }
+                if sheet == "carphoto" { showCarPhoto = true }
+                if sheet == "odometer" { showOdometer = true }
             }
         }
     }
 
     // MARK: Блоки
+
+    // Машина владельца сверху: фото без фона + название
+    private var carHero: some View {
+        VStack(spacing: 6) {
+            Button { showCarPhoto = true } label: {
+                CarImageView(car: car, height: car.photo == nil ? 140 : 170)
+            }
+            .buttonStyle(.plain)
+            Text(car.title)
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .multilineTextAlignment(.center)
+            if !car.subtitle.isEmpty {
+                Text(car.subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.bottom, 4)
+    }
 
     private var monthCard: some View {
         let s = stats
@@ -60,13 +90,25 @@ struct DashboardView: View {
                     .foregroundStyle(Color.white.opacity(0.85))
             }
             HStack {
-                Label(Fmt.km(s.currentOdometer), systemImage: "speedometer")
+                Button { showOdometer = true } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "speedometer")
+                        Text(Fmt.km(s.currentOdometer))
+                        Image(systemName: "plus.circle.fill")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.white.opacity(0.18), in: Capsule())
+                }
+                .buttonStyle(.plain)
                 Spacer()
                 Text("Your car — your price")
                     .italic()
+                    .font(.caption)
+                    .foregroundStyle(Color.white.opacity(0.75))
             }
-            .font(.caption)
-            .foregroundStyle(Color.white.opacity(0.75))
             .padding(.top, 6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
