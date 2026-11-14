@@ -55,15 +55,12 @@ struct DashboardView: View {
                 .foregroundStyle(Color.white)
                 .contentTransition(.numericText())
             if s.lastMonthTotal > 0 {
-                let diff = s.monthTotal - s.lastMonthTotal
-                Text(diff <= 0
-                     ? "На \(Fmt.money(-diff, decimals: 0)) меньше, чем в прошлом месяце"
-                     : "На \(Fmt.money(diff, decimals: 0)) больше, чем в прошлом месяце")
+                Text("В прошлом месяце: \(Fmt.money(s.lastMonthTotal, decimals: 0))")
                     .font(.footnote)
                     .foregroundStyle(Color.white.opacity(0.85))
             }
             HStack {
-                Label(Fmt.km(s.currentOdometer), systemImage: "road.lanes")
+                Label(Fmt.km(s.currentOdometer), systemImage: "speedometer")
                 Spacer()
                 Text("Your car — your price")
                     .italic()
@@ -116,11 +113,11 @@ struct DashboardView: View {
         return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
             tile("Цена километра", s.costPerKm.map { Fmt.money($0, decimals: 2) } ?? "—",
                  hint: s.costPerKm == nil ? "после 100 км" : "все расходы / км", icon: "eurosign.circle")
-            tile("Расход топлива", s.fuelConsumption.map { Fmt.number($0) + " л/100" } ?? "—",
-                 hint: s.fuelConsumption == nil ? "нужно 2 заправки с пробегом" : "в среднем", icon: "fuelpump")
+            tile("Расход топлива", s.fuelConsumption.map { Fmt.number($0) + " л" } ?? "—",
+                 hint: s.fuelConsumption == nil ? "нужно 2 заправки с пробегом" : "на 100 км", icon: "fuelpump")
             tile("В среднем в месяц", s.monthlyAverage.map { Fmt.money($0, decimals: 0) } ?? "—",
                  hint: "с начала учёта", icon: "calendar")
-            tile("Проехал", Fmt.km(s.kmDriven), hint: "с начала учёта", icon: "speedometer")
+            tile("Проехал", Fmt.km(s.kmDriven), hint: "с начала учёта", icon: "road.lanes")
         }
     }
 
@@ -208,6 +205,13 @@ struct DashboardView: View {
 struct ExpenseRow: View {
     let expense: Expense
 
+    private var details: String {
+        var parts = [Fmt.shortDate(expense.date)]
+        if let l = expense.liters { parts.append("\(Fmt.number(l)) л") }
+        if let o = expense.odometer { parts.append(Fmt.km(o)) }
+        return parts.joined(separator: " · ")
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: expense.category.icon)
@@ -217,13 +221,10 @@ struct ExpenseRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(expense.note.isEmpty ? expense.category.title : expense.note)
                     .lineLimit(1)
-                HStack(spacing: 6) {
-                    Text(Fmt.shortDate(expense.date))
-                    if let l = expense.liters { Text("· \(Fmt.number(l)) л") }
-                    if let o = expense.odometer { Text("· \(Fmt.km(o))") }
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Text(details)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
             Spacer()
             Text(Fmt.money(expense.amount))
@@ -242,7 +243,11 @@ struct CategoryBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Label(category.title, systemImage: category.icon).foregroundStyle(category.color)
+                Label {
+                    Text(category.title)
+                } icon: {
+                    Image(systemName: category.icon).foregroundStyle(category.color)
+                }
                 Spacer()
                 Text(Fmt.money(value)).monospacedDigit()
             }

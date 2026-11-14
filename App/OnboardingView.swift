@@ -16,21 +16,35 @@ struct OnboardingView: View {
         NavigationStack {
             Form {
                 Section {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         Image(systemName: "car.fill")
-                            .font(.system(size: 44))
-                            .foregroundStyle(.tint)
+                            .font(.system(size: 30, weight: .bold))
+                            .foregroundStyle(Color(red: 0.05, green: 0.45, blue: 0.42))
+                            .frame(width: 64, height: 64)
+                            .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
                         Text("AutoNote")
-                            .font(.largeTitle.bold())
+                            .font(.system(size: 36, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.white)
+                            .padding(.top, 6)
                         Text("Your car — your price.")
                             .font(.headline)
-                            .foregroundStyle(.secondary)
-                        Text("Фоткай чеки или говори голосом — приложение само всё запишет и посчитает, сколько тебе стоит машина.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .padding(.top, 4)
+                            .italic()
+                            .foregroundStyle(Color.white.opacity(0.85))
+                        VStack(alignment: .leading, spacing: 8) {
+                            feature("camera.fill", "Сфоткал чек — расход записан")
+                            feature("mic.fill", "Или просто скажи голосом")
+                            feature("eurosign.circle.fill", "Сколько стоит каждый километр")
+                            feature("bell.fill", "Напомнит про ТО, TÜV и страховку")
+                        }
+                        .padding(.top, 8)
                     }
-                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(22)
+                    .background(
+                        LinearGradient(colors: [Color(red: 0.07, green: 0.55, blue: 0.50), Color(red: 0.05, green: 0.20, blue: 0.33)],
+                                       startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+                    .listRowInsets(EdgeInsets())
                 }
 
                 Section("Машина") {
@@ -67,6 +81,15 @@ struct OnboardingView: View {
             }
             .scrollDismissesKeyboard(.interactively)
         }
+    }
+
+    private func feature(_ icon: String, _ text: String) -> some View {
+        Label {
+            Text(text).foregroundStyle(Color.white)
+        } icon: {
+            Image(systemName: icon).foregroundStyle(Color.white.opacity(0.8))
+        }
+        .font(.subheadline)
     }
 }
 

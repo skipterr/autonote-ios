@@ -115,7 +115,11 @@ struct ExpenseEditor: View {
                             .multilineTextAlignment(.trailing)
                         Text("км").foregroundStyle(.secondary)
                     }
-                    TextField("Заметка, например «Shell» или «колодки»", text: $note)
+                    HStack {
+                        Text("Заметка")
+                        TextField("Shell, колодки…", text: $note)
+                            .multilineTextAlignment(.trailing)
+                    }
                 } footer: {
                     if category == .fuel {
                         Text("Укажи литры и пробег — и приложение посчитает расход топлива на 100 км.")

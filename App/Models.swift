@@ -134,7 +134,7 @@ enum ReminderKind: String, CaseIterable, Identifiable {
         case .service: "wrench.and.screwdriver.fill"
         case .tuv: "checkmark.seal.fill"
         case .insurance: "shield.fill"
-        case .tires: "snowflake"
+        case .tires: "arrow.triangle.2.circlepath"
         case .oil: "drop.halffull"
         case .other: "bell.fill"
         }
