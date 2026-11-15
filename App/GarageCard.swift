@@ -1,7 +1,7 @@
 import SwiftUI
 
 // Карточка «гаража» сверху главной: название, номер в плашке и машина сбоку.
-// Машину рисует Gemini по марке, модели, году и цвету; нажми на неё — меню.
+// Машина рисуется сама — в цвете и кузове твоей; нажми на неё — меню.
 struct GarageCard: View {
     @Bindable var car: Car
 
@@ -40,28 +40,39 @@ struct GarageCard: View {
             .buttonStyle(.plain)
 
             Menu {
-                Button {
-                    Task { await draw() }
+                Picker(selection: Binding(get: { car.bodyType }, set: { car.bodyType = $0; dropAI() })) {
+                    ForEach(BodyType.allCases) { Text($0.title).tag($0) }
                 } label: {
-                    Label("Нарисовать заново", systemImage: "arrow.clockwise")
+                    Label("Кузов: \(car.bodyType.title)", systemImage: "car.side")
                 }
-                Picker(selection: Binding(get: { car.color }, set: { c in
-                    car.color = c
-                    Task { await draw() }
-                })) {
-                    ForEach(CarColor.allCases) { c in
-                        Text(c.title).tag(c)
-                    }
+                .pickerStyle(.menu)
+                Picker(selection: Binding(get: { car.color }, set: { car.color = $0; dropAI() })) {
+                    ForEach(CarColor.allCases) { Text($0.title).tag($0) }
                 } label: {
                     Label("Цвет: \(car.color.title)", systemImage: "paintpalette")
                 }
                 .pickerStyle(.menu)
+                Divider()
+                if car.photo != nil {
+                    Button { dropAI() } label: {
+                        Label("Вернуть рисованную", systemImage: "arrow.uturn.backward")
+                    }
+                }
+                Button { Task { await drawAI() } } label: {
+                    Label("Нарисовать через ИИ", systemImage: "sparkles")
+                }
             } label: {
                 artwork
             }
             .disabled(loading)
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 20)
             .padding(.bottom, 14)
+            .alert("Не получилось нарисовать",
+                   isPresented: Binding(get: { errorText != nil }, set: { if !$0 { errorText = nil } })) {
+                Button("Понятно", role: .cancel) {}
+            } message: {
+                Text(errorText ?? "")
+            }
         }
         .frame(maxWidth: .infinity)
         .background(
@@ -69,11 +80,11 @@ struct GarageCard: View {
                            startPoint: .top, endPoint: .bottom),
             in: RoundedRectangle(cornerRadius: 22)
         )
-        // рисуем сами, когда картинки ещё нет или сменили марку/модель/цвет
-        .task(id: "\(car.make)|\(car.modelName)|\(car.year)") {
-            if car.photo == nil && KeyVault.hasKey && !UserDefaults.standard.bool(forKey: "demo") {
-                try? await Task.sleep(for: .seconds(1))   // ждём, пока человек допечатает
-                if !Task.isCancelled { await draw() }
+        .onAppear {
+            // фото из прошлых версий (свои или из интернета) больше не показываем
+            if car.photo != nil && car.photoIsAI != true {
+                car.photo = nil
+                car.photoVariant = nil
             }
         }
         .alert("Госномер", isPresented: $editingPlate) {
@@ -90,48 +101,45 @@ struct GarageCard: View {
 
     private var artwork: some View {
         ZStack {
-            if let data = car.photo, let img = UIImage(data: data) {
+            if let data = car.photo, car.photoIsAI == true, let img = UIImage(data: data) {
                 Image(uiImage: img)
                     .resizable()
                     .scaledToFit()
                     .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 8)
-                    .opacity(loading ? 0.3 : 1)
             } else {
-                Image(systemName: "car.side.fill")
-                    .font(.system(size: 54))
-                    .foregroundStyle(car.color.swatch.opacity(0.55))
-                    .opacity(loading ? 0.3 : 1)
+                CarSilhouette(kind: car.bodyType, color: car.color)
             }
             if loading {
-                VStack(spacing: 6) {
-                    ProgressView()
-                    Text("Рисую твою машину…").font(.caption2).foregroundStyle(.secondary)
-                }
-            } else if car.photo == nil || errorText != nil {
-                Text(errorText ?? (KeyVault.hasKey ? "Нажми, чтобы нарисовать свою машину"
-                                                   : "Добавь ключ Gemini в Настройках — и я нарисую твою машину"))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 20)
-                    .offset(y: 46)
+                ProgressView()
+                    .padding(10)
+                    .background(.regularMaterial, in: Circle())
             }
         }
+        .opacity(loading ? 0.5 : 1)
         .frame(height: 120)
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
     }
 
-    private func draw() async {
+    private func dropAI() {
+        car.photo = nil
+        car.photoIsAI = nil
+    }
+
+    private func drawAI() async {
         guard !loading, !car.make.trimmed.isEmpty else { return }
+        guard KeyVault.hasKey else {
+            errorText = "Для этого нужен ключ Gemini в Настройках."
+            return
+        }
         loading = true
-        errorText = nil
         defer { loading = false }
         do {
             let img = try await CarArtwork.draw(make: car.make, model: car.modelName, year: car.year, color: car.color)
             car.photo = img.pngData()
+            car.photoIsAI = true
         } catch {
-            errorText = (error as? LocalizedError)?.errorDescription ?? "Не получилось нарисовать машину"
+            errorText = (error as? LocalizedError)?.errorDescription ?? "Попробуй позже."
         }
     }
 }

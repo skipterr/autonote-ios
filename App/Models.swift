@@ -17,10 +17,17 @@ final class Car {
     var plate: String?                              // госномер — показываем текстом в плашке
     var photoVariant: Int?                          // какой по счёту вариант картинки выбран
     var colorRaw: String?                           // цвет машины — для картинки
+    var bodyRaw: String?                            // тип кузова (если не выбран — угадываем по модели)
+    var photoIsAI: Bool?                            // photo нарисовал ИИ (старые фото из прошлых версий убираем)
 
     var color: CarColor {
         get { colorRaw.flatMap(CarColor.init(rawValue:)) ?? .graphite }
         set { colorRaw = newValue.rawValue }
+    }
+
+    var bodyType: BodyType {
+        get { bodyRaw.flatMap(BodyType.init(rawValue:)) ?? BodyType.guess(model: modelName) }
+        set { bodyRaw = newValue.rawValue }
     }
 
     init(name: String, make: String, modelName: String, year: Int, startOdometer: Int) {

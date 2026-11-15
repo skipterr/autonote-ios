@@ -13,6 +13,7 @@ struct SettingsView: View {
     private func resetArtwork() {
         car.photo = nil
         car.photoVariant = nil
+        car.photoIsAI = nil
     }
 
     var body: some View {
@@ -24,6 +25,11 @@ struct SettingsView: View {
                         .onChange(of: car.make) { _, _ in resetArtwork() }
                     TextField("Модель", text: $car.modelName)
                         .onChange(of: car.modelName) { _, _ in resetArtwork() }
+                    Picker("Кузов", selection: Binding(get: { car.bodyType }, set: { car.bodyType = $0; resetArtwork() })) {
+                        ForEach(BodyType.allCases) { b in
+                            Text(b.title).tag(b)
+                        }
+                    }
                     Picker("Цвет", selection: Binding(get: { car.color }, set: { car.color = $0; resetArtwork() })) {
                         ForEach(CarColor.allCases) { c in
                             Text(c.title).tag(c)

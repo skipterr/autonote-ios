@@ -56,6 +56,14 @@ shot "light-12-welcome2" -demo YES -onboarding YES -welcomePage 1
 xcrun simctl ui "$UDID" appearance dark
 shot "dark-13-welcome5" -demo YES -onboarding YES -welcomePage 4
 
+# рисованная машина: все кузова в разных цветах
+xcrun simctl ui "$UDID" appearance light
+shot "light-car-sedan" -demo YES -tab 0 -body sedan -color red
+shot "light-car-wagon" -demo YES -tab 0 -body wagon -color white
+xcrun simctl ui "$UDID" appearance dark
+shot "dark-car-suv" -demo YES -tab 0 -body suv -color black
+shot "dark-car-coupe" -demo YES -tab 0 -body coupe -color blue
+
 # знакомство с открытой клавиатурой (поле года)
 xcrun simctl ui "$UDID" appearance dark
 shot "dark-7-onboarding-typing" -demo YES -onboarding YES -welcomeSeen YES -focus year

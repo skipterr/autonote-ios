@@ -8,6 +8,9 @@ enum DemoData {
     static func seed(_ ctx: ModelContext) {
         let car = Car(name: "", make: "Volkswagen", modelName: "Golf", year: 2017, startOdometer: 84_000)
         car.plate = "M AN 2017"
+        // для скриншотов: `-body suv -color red`
+        car.bodyRaw = UserDefaults.standard.string(forKey: "body")
+        car.colorRaw = UserDefaults.standard.string(forKey: "color")
         ctx.insert(car)
 
         let cal = Calendar.current
