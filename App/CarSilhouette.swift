@@ -113,7 +113,8 @@ struct CarSilhouette: View {
                           cornerRadius: 0.8 * s), with: .color(Color(red: 0.85, green: 0.12, blue: 0.12)))
 
             // колёса
-            for cx in [CGFloat(22), 78] {
+            let wheelXs: [CGFloat] = [22, 78]
+            for cx in wheelXs {
                 let c = P(cx, g.wheelY), r = g.wheelR * s
                 ctx.fill(Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)),
                          with: .color(Color(white: 0.09)))
