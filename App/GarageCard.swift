@@ -1,7 +1,8 @@
+import PhotosUI
 import SwiftUI
 
 // Карточка «гаража» сверху главной: название, номер в плашке и машина сбоку.
-// Машина рисуется сама — в цвете и кузове твоей; нажми на неё — меню.
+// Машина — твоё фото без фона; пока фото нет — рисованная машинка в цвете и кузове твоей.
 struct GarageCard: View {
     @Bindable var car: Car
 
@@ -9,6 +10,10 @@ struct GarageCard: View {
     @State private var plateText = ""
     @State private var loading = false
     @State private var errorText: String?
+    @State private var showCamera = false
+    @State private var showGallery = false
+    @State private var pendingImage: UIImage?
+    @State private var galleryItem: PhotosPickerItem?
 
     var body: some View {
         VStack(spacing: 6) {
@@ -40,26 +45,29 @@ struct GarageCard: View {
             .buttonStyle(.plain)
 
             Menu {
-                Picker(selection: Binding(get: { car.bodyType }, set: { car.bodyType = $0; dropAI() })) {
+                Picker(selection: Binding(get: { car.bodyType }, set: { car.bodyType = $0 })) {
                     ForEach(BodyType.allCases) { Text($0.title).tag($0) }
                 } label: {
                     Label("Кузов: \(car.bodyType.title)", systemImage: "car.side")
                 }
                 .pickerStyle(.menu)
-                Picker(selection: Binding(get: { car.color }, set: { car.color = $0; dropAI() })) {
+                Picker(selection: Binding(get: { car.color }, set: { car.color = $0 })) {
                     ForEach(CarColor.allCases) { Text($0.title).tag($0) }
                 } label: {
                     Label("Цвет: \(car.color.title)", systemImage: "paintpalette")
                 }
                 .pickerStyle(.menu)
                 Divider()
-                if car.photo != nil {
-                    Button { dropAI() } label: {
-                        Label("Вернуть рисованную", systemImage: "arrow.uturn.backward")
-                    }
+                Button { showCamera = true } label: {
+                    Label("Сфоткать машину", systemImage: "camera")
                 }
-                Button { Task { await drawAI() } } label: {
-                    Label("Нарисовать через ИИ", systemImage: "sparkles")
+                Button { showGallery = true } label: {
+                    Label("Выбрать из галереи", systemImage: "photo.on.rectangle")
+                }
+                if car.photo != nil {
+                    Button(role: .destructive) { dropAI() } label: {
+                        Label("Убрать фото", systemImage: "trash")
+                    }
                 }
             } label: {
                 artwork
@@ -67,7 +75,7 @@ struct GarageCard: View {
             .disabled(loading)
             .padding(.horizontal, 20)
             .padding(.bottom, 14)
-            .alert("Не получилось нарисовать",
+            .alert("Не получилось",
                    isPresented: Binding(get: { errorText != nil }, set: { if !$0 { errorText = nil } })) {
                 Button("Понятно", role: .cancel) {}
             } message: {
@@ -80,8 +88,23 @@ struct GarageCard: View {
                            startPoint: .top, endPoint: .bottom),
             in: RoundedRectangle(cornerRadius: 22)
         )
+        .fullScreenCover(isPresented: $showCamera, onDismiss: {
+            if let img = pendingImage { pendingImage = nil; Task { await useImage(img) } }
+        }) {
+            CameraPicker { pendingImage = $0 }.ignoresSafeArea()
+        }
+        .photosPicker(isPresented: $showGallery, selection: $galleryItem, matching: .images)
+        .onChange(of: galleryItem) { _, item in
+            guard let item else { return }
+            galleryItem = nil
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) {
+                    await useImage(img)
+                }
+            }
+        }
         .onAppear {
-            // фото из прошлых версий (свои или из интернета) больше не показываем
+            // старые картинки из прошлых версий (из интернета) больше не показываем
             if car.photo != nil && car.photoIsAI != true {
                 car.photo = nil
                 car.photoVariant = nil
@@ -126,20 +149,16 @@ struct GarageCard: View {
         car.photoIsAI = nil
     }
 
-    private func drawAI() async {
-        guard !loading, !car.make.trimmed.isEmpty else { return }
-        guard KeyVault.hasKey else {
-            errorText = "Для этого нужен ключ Gemini в Настройках."
-            return
-        }
+    // Своё фото: вырезаем фон (номер не трогаем)
+    private func useImage(_ image: UIImage) async {
         loading = true
         defer { loading = false }
         do {
-            let img = try await CarArtwork.draw(make: car.make, model: car.modelName, year: car.year, color: car.color)
-            car.photo = img.pngData()
+            let cut = try await CarArtwork.cutOut(image)
+            car.photo = cut.pngData()
             car.photoIsAI = true
         } catch {
-            errorText = (error as? LocalizedError)?.errorDescription ?? "Попробуй позже."
+            errorText = "Не нашёл на фото машину. Попробуй фото, где она видна целиком и стоит одна."
         }
     }
 }

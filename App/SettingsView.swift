@@ -22,15 +22,13 @@ struct SettingsView: View {
                 Section("Машина") {
                     TextField("Как зовёшь машину", text: $car.name)
                     TextField("Марка", text: $car.make)
-                        .onChange(of: car.make) { _, _ in resetArtwork() }
                     TextField("Модель", text: $car.modelName)
-                        .onChange(of: car.modelName) { _, _ in resetArtwork() }
-                    Picker("Кузов", selection: Binding(get: { car.bodyType }, set: { car.bodyType = $0; resetArtwork() })) {
+                    Picker("Кузов", selection: Binding(get: { car.bodyType }, set: { car.bodyType = $0 })) {
                         ForEach(BodyType.allCases) { b in
                             Text(b.title).tag(b)
                         }
                     }
-                    Picker("Цвет", selection: Binding(get: { car.color }, set: { car.color = $0; resetArtwork() })) {
+                    Picker("Цвет", selection: Binding(get: { car.color }, set: { car.color = $0 })) {
                         ForEach(CarColor.allCases) { c in
                             Text(c.title).tag(c)
                         }
