@@ -97,7 +97,7 @@ private struct CarPainter {
     func shellPath() -> Path {
         let pts: [CGPoint] = shape.outline.map { P($0.x, $0.y) }
         var path: Path = smoothPath(pts, closed: false)
-        let ar: CGFloat = shape.wheelR + 1.5
+        let ar: CGFloat = shape.wheelR + 0.9
         let by: CGFloat = shape.bottomY
         let lift: CGFloat = by - ar * 4 / 3
         for cx in [CGFloat(78), CGFloat(22)] {
@@ -132,7 +132,8 @@ private struct CarPainter {
         ctx.fill(glass, with: .linearGradient(Gradient(colors: [top, bottom]),
                                               startPoint: P(50, shape.beltY - 8), endPoint: P(50, shape.beltY)))
         var pillar = Path()
-        pillar.move(to: P(shape.pillarX + 1.2, shape.beltY - 9))
+        let winTop: CGFloat = (shape.window.map(\.y).min() ?? shape.beltY - 6) + 0.3
+        pillar.move(to: P(shape.pillarX + 1.2, winTop))
         pillar.addLine(to: P(shape.pillarX, shape.beltY + 0.5))
         ctx.stroke(pillar, with: .color(Color(base)), lineWidth: 1.7 * s)
     }
@@ -193,42 +194,42 @@ private struct CarShape {
     let frontDoorX: CGFloat  // передний край передней двери
     let head: CGPoint        // фара (левый верхний угол)
     let tail: CGPoint        // фонарь
-    var wheelR: CGFloat = 6.3
-    var wheelY: CGFloat = 32.6
-    var bottomY: CGFloat = 32
+    var wheelR: CGFloat = 7
+    var wheelY: CGFloat = 31.9
+    var bottomY: CGFloat = 31.2
 
     static func of(_ kind: BodyType) -> CarShape {
         func pts(_ a: [(CGFloat, CGFloat)]) -> [CGPoint] { a.map { CGPoint(x: $0.0, y: $0.1) } }
         // общий «нос»: капот и бампер
-        let nose: [(CGFloat, CGFloat)] = [(66, 17.5), (80, 19), (92, 21), (97, 25), (97, 30), (95, 32)]
+        let nose: [(CGFloat, CGFloat)] = [(64, 16.8), (78, 18.4), (90, 19.8), (96, 22.4), (97.5, 27), (95.5, 31.2)]
         switch kind {
         case .hatchback:
-            return CarShape(outline: pts([(4, 31), (3, 25), (5, 17), (9, 12), (16, 9), (34, 8), (50, 8.5), (58, 12)] + nose),
-                            window: pts([(11, 16.8), (15, 11.2), (34, 10), (50, 10.5), (57, 13.5), (62, 16.8)]),
-                            beltY: 16.8, pillarX: 36, frontDoorX: 61.5,
-                            head: CGPoint(x: 87, y: 22), tail: CGPoint(x: 5.4, y: 17.6))
+            return CarShape(outline: pts([(5, 31.2), (4, 25), (5.5, 19), (10, 12.5), (18, 9.2), (32, 8.2), (46, 8.6), (54, 11)] + nose),
+                            window: pts([(12, 17.2), (17.5, 11.6), (32, 10.2), (46, 10.6), (53, 13), (59.5, 17.2)]),
+                            beltY: 17.2, pillarX: 35, frontDoorX: 60,
+                            head: CGPoint(x: 87.5, y: 20.6), tail: CGPoint(x: 5.6, y: 19.4))
         case .sedan:
-            return CarShape(outline: pts([(3, 31), (2, 25), (3, 20), (14, 18.5), (22, 16), (30, 9.5), (48, 8.5), (57, 11)] + nose),
-                            window: pts([(24, 16.8), (31, 11), (48, 10.3), (55.5, 12.8), (62, 16.8)]),
-                            beltY: 16.8, pillarX: 40, frontDoorX: 61.5,
-                            head: CGPoint(x: 87, y: 22), tail: CGPoint(x: 3.2, y: 20.4))
+            return CarShape(outline: pts([(4, 31.2), (3, 25), (4, 20), (14, 18.6), (22, 15.5), (30, 9.6), (46, 8.6), (54, 11)] + nose),
+                            window: pts([(24, 17.2), (31, 11.4), (46, 10.5), (53, 13), (59.5, 17.2)]),
+                            beltY: 17.2, pillarX: 39, frontDoorX: 60,
+                            head: CGPoint(x: 87.5, y: 20.6), tail: CGPoint(x: 3.6, y: 20.6))
         case .wagon:
-            return CarShape(outline: pts([(3, 31), (2, 25), (3, 15), (6, 10), (14, 8), (50, 8), (58, 11.5)] + nose),
-                            window: pts([(6, 16.8), (8, 11.5), (15, 10), (50, 10), (57, 13.5), (62, 16.8)]),
-                            beltY: 16.8, pillarX: 37, frontDoorX: 61.5,
-                            head: CGPoint(x: 87, y: 22), tail: CGPoint(x: 3.2, y: 16.6))
+            return CarShape(outline: pts([(4, 31.2), (3, 25), (3.5, 15), (6, 10), (14, 8.2), (46, 8.4), (54, 11)] + nose),
+                            window: pts([(7, 17.2), (8.5, 11.8), (15, 10.2), (46, 10.4), (53, 13), (59.5, 17.2)]),
+                            beltY: 17.2, pillarX: 36, frontDoorX: 60,
+                            head: CGPoint(x: 87.5, y: 20.6), tail: CGPoint(x: 3.6, y: 17))
         case .suv:
             return CarShape(outline: pts([(3, 31), (2, 22), (3, 12), (7, 6), (14, 5), (52, 5), (60, 8.5), (67, 14),
                                           (82, 15.5), (93, 17), (97, 21), (97, 30), (95, 31)]),
                             window: pts([(6, 13.5), (9, 8), (15, 7), (52, 7), (59.5, 10.5), (64, 13.5)]),
                             beltY: 13.5, pillarX: 37, frontDoorX: 63,
                             head: CGPoint(x: 88, y: 17.6), tail: CGPoint(x: 3, y: 13.6),
-                            wheelR: 7, wheelY: 31.8, bottomY: 31)
+                            wheelR: 7.6, wheelY: 31.4, bottomY: 30.5)
         case .coupe:
-            return CarShape(outline: pts([(4, 31), (3, 24), (5, 18.5), (14, 15.5), (26, 9.5), (44, 8.5), (56, 12)] + nose),
-                            window: pts([(20, 16.8), (28, 11.2), (44, 10.4), (54.5, 13), (61, 16.8)]),
-                            beltY: 16.8, pillarX: 34, frontDoorX: 61,
-                            head: CGPoint(x: 87, y: 22), tail: CGPoint(x: 4.2, y: 18.8))
+            return CarShape(outline: pts([(5, 31.2), (4, 24.5), (5.5, 19.5), (14, 16), (26, 9.8), (42, 8.8), (54, 12)] + nose),
+                            window: pts([(20, 17.2), (27.5, 11.6), (42, 10.8), (52.5, 13.6), (59.5, 17.2)]),
+                            beltY: 17.2, pillarX: 33, frontDoorX: 60,
+                            head: CGPoint(x: 87.5, y: 20.6), tail: CGPoint(x: 5, y: 19.8))
         }
     }
 }
