@@ -49,96 +49,141 @@ struct CarSilhouette: View {
 
     var body: some View {
         Canvas { ctx, size in
-            let s = min(size.width / 100, size.height / 40)
-            let ox = (size.width - 100 * s) / 2, oy = (size.height - 40 * s) / 2
-            func P(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: ox + x * s, y: oy + y * s) }
-            let g = CarShape.of(kind)
-            let base = UIColor(color.swatch)
-
-            // тень под машиной
-            ctx.fill(Path(ellipseIn: CGRect(x: ox + 7 * s, y: oy + 37.6 * s, width: 86 * s, height: 2.4 * s)),
-                     with: .color(.black.opacity(0.3)))
-
-            // кузов: верх — плавная линия, низ — с арками колёс
-            var shell = smoothPath(g.outline.map { P($0.x, $0.y) }, closed: false)
-            let ar = g.wheelR + 1.5
-            func arch(_ cx: CGFloat) {
-                shell.addLine(to: P(cx + ar, g.bottomY))
-                shell.addCurve(to: P(cx - ar, g.bottomY),
-                              control1: P(cx + ar, g.bottomY - ar * 4 / 3),
-                              control2: P(cx - ar, g.bottomY - ar * 4 / 3))
-            }
-            arch(78)
-            arch(22)
-            shell.closeSubpath()
-            ctx.fill(shell, with: .linearGradient(
-                Gradient(colors: [Color(base.shaded(1.3, plus: 0.1)), Color(base), Color(base.shaded(0.62))]),
-                startPoint: P(50, g.outline.map(\.y).min() ?? 8), endPoint: P(50, 33)))
-            ctx.stroke(shell, with: .color(Color.primary.opacity(0.16)), lineWidth: 0.35 * s)
-
-            // блик по линии плеча
-            var shoulder = Path()
-            shoulder.move(to: P(g.window.first!.x - 2, g.beltY + 2.4))
-            shoulder.addLine(to: P(88, g.beltY + 3.6))
-            ctx.stroke(shoulder, with: .color(.white.opacity(0.22)), lineWidth: 0.45 * s)
-
-            // стёкла и стойка между дверями
-            let glass = smoothPath(g.window.map { P($0.x, $0.y) }, closed: true, k: 0.55)
-            ctx.fill(glass, with: .linearGradient(
-                Gradient(colors: [Color(red: 0.30, green: 0.36, blue: 0.42), Color(red: 0.10, green: 0.13, blue: 0.17)]),
-                startPoint: P(50, g.beltY - 8), endPoint: P(50, g.beltY)))
-            var pillar = Path()
-            pillar.move(to: P(g.pillarX + 1.2, g.beltY - 9))
-            pillar.addLine(to: P(g.pillarX, g.beltY + 0.5))
-            ctx.stroke(pillar, with: .color(Color(base)), lineWidth: 1.7 * s)
-
-            // линии дверей и ручки
-            var doors = Path()
-            doors.move(to: P(g.pillarX, g.beltY)); doors.addLine(to: P(g.pillarX - 0.6, 30.5))
-            doors.move(to: P(g.frontDoorX, g.beltY)); doors.addLine(to: P(g.frontDoorX + 1.2, 25))
-            doors.addLine(to: P(g.frontDoorX - 0.4, 30.5))
-            ctx.stroke(doors, with: .color(.black.opacity(0.25)), lineWidth: 0.35 * s)
-            for hx in [g.pillarX - 8, g.pillarX + 12] {
-                ctx.fill(Path(roundedRect: CGRect(x: ox + hx * s, y: oy + (g.beltY + 2.6) * s, width: 3.4 * s, height: 0.9 * s),
-                              cornerRadius: 0.45 * s), with: .color(.black.opacity(0.3)))
-            }
-
-            // зеркало, фары, фонари
-            ctx.fill(Path(ellipseIn: CGRect(x: ox + (g.frontDoorX - 1.6) * s, y: oy + (g.beltY - 1.6) * s,
-                                            width: 3 * s, height: 1.8 * s)),
-                     with: .color(Color(base.shaded(0.75))))
-            ctx.fill(Path(roundedRect: CGRect(x: ox + g.head.x * s, y: oy + g.head.y * s, width: 6 * s, height: 1.9 * s),
-                          cornerRadius: 0.9 * s), with: .color(Color(white: 0.93)))
-            ctx.fill(Path(roundedRect: CGRect(x: ox + g.tail.x * s, y: oy + g.tail.y * s, width: 3.4 * s, height: 2.2 * s),
-                          cornerRadius: 0.8 * s), with: .color(Color(red: 0.85, green: 0.12, blue: 0.12)))
-
-            // колёса
-            let wheelXs: [CGFloat] = [22, 78]
-            for cx in wheelXs {
-                let c = P(cx, g.wheelY), r = g.wheelR * s
-                ctx.fill(Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)),
-                         with: .color(Color(white: 0.09)))
-                let rr = r * 0.63
-                ctx.fill(Path(ellipseIn: CGRect(x: c.x - rr, y: c.y - rr, width: 2 * rr, height: 2 * rr)),
-                         with: .linearGradient(Gradient(colors: [Color(white: 0.88), Color(white: 0.52)]),
-                                               startPoint: CGPoint(x: c.x, y: c.y - rr), endPoint: CGPoint(x: c.x, y: c.y + rr)))
-                var spokes = Path()
-                for i in 0..<5 {
-                    let a = Double(i) * 2 * .pi / 5 - .pi / 2
-                    spokes.move(to: c)
-                    spokes.addLine(to: CGPoint(x: c.x + rr * 0.92 * cos(a), y: c.y + rr * 0.92 * sin(a)))
-                }
-                ctx.stroke(spokes, with: .color(Color(white: 0.32)), lineWidth: 0.55 * s)
-                let hub = r * 0.14
-                ctx.fill(Path(ellipseIn: CGRect(x: c.x - hub, y: c.y - hub, width: 2 * hub, height: 2 * hub)),
-                         with: .color(Color(white: 0.25)))
-            }
+            CarPainter(ctx: ctx, size: size, shape: CarShape.of(kind), base: UIColor(color.swatch)).draw()
         }
         .aspectRatio(100 / 40, contentMode: .fit)
         .accessibilityLabel("\(color.title) \(kind.title.lowercased())")
     }
 }
 
+// Рисование разбито на маленькие шаги — так компилятору проще
+private struct CarPainter {
+    var ctx: GraphicsContext
+    let shape: CarShape
+    let base: UIColor
+    let s: CGFloat
+    let ox: CGFloat
+    let oy: CGFloat
+
+    init(ctx: GraphicsContext, size: CGSize, shape: CarShape, base: UIColor) {
+        self.ctx = ctx
+        self.shape = shape
+        self.base = base
+        let scale: CGFloat = min(size.width / 100, size.height / 40)
+        s = scale
+        ox = (size.width - 100 * scale) / 2
+        oy = (size.height - 40 * scale) / 2
+    }
+
+    func P(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: ox + x * s, y: oy + y * s) }
+
+    func R(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) -> CGRect {
+        CGRect(x: ox + x * s, y: oy + y * s, width: w * s, height: h * s)
+    }
+
+    func draw() {
+        drawShadow()
+        drawShell()
+        drawGlass()
+        drawDetails()
+        drawWheel(22)
+        drawWheel(78)
+    }
+
+    func drawShadow() {
+        ctx.fill(Path(ellipseIn: R(7, 37.6, 86, 2.4)), with: .color(Color.black.opacity(0.3)))
+    }
+
+    func shellPath() -> Path {
+        let pts: [CGPoint] = shape.outline.map { P($0.x, $0.y) }
+        var path: Path = smoothPath(pts, closed: false)
+        let ar: CGFloat = shape.wheelR + 1.5
+        let by: CGFloat = shape.bottomY
+        let lift: CGFloat = by - ar * 4 / 3
+        for cx in [CGFloat(78), CGFloat(22)] {
+            path.addLine(to: P(cx + ar, by))
+            path.addCurve(to: P(cx - ar, by), control1: P(cx + ar, lift), control2: P(cx - ar, lift))
+        }
+        path.closeSubpath()
+        return path
+    }
+
+    func drawShell() {
+        let path = shellPath()
+        let top: CGFloat = shape.outline.map(\.y).min() ?? 8
+        let light = Color(base.shaded(1.3, plus: 0.1))
+        let dark = Color(base.shaded(0.62))
+        let gradient = Gradient(colors: [light, Color(base), dark])
+        ctx.fill(path, with: .linearGradient(gradient, startPoint: P(50, top), endPoint: P(50, 33)))
+        ctx.stroke(path, with: .color(Color.primary.opacity(0.16)), lineWidth: 0.35 * s)
+
+        var shoulder = Path()
+        let startX: CGFloat = (shape.window.first?.x ?? 10) - 2
+        shoulder.move(to: P(startX, shape.beltY + 2.4))
+        shoulder.addLine(to: P(88, shape.beltY + 3.6))
+        ctx.stroke(shoulder, with: .color(Color.white.opacity(0.22)), lineWidth: 0.45 * s)
+    }
+
+    func drawGlass() {
+        let pts: [CGPoint] = shape.window.map { P($0.x, $0.y) }
+        let glass: Path = smoothPath(pts, closed: true, k: 0.55)
+        let top = Color(red: 0.30, green: 0.36, blue: 0.42)
+        let bottom = Color(red: 0.10, green: 0.13, blue: 0.17)
+        ctx.fill(glass, with: .linearGradient(Gradient(colors: [top, bottom]),
+                                              startPoint: P(50, shape.beltY - 8), endPoint: P(50, shape.beltY)))
+        var pillar = Path()
+        pillar.move(to: P(shape.pillarX + 1.2, shape.beltY - 9))
+        pillar.addLine(to: P(shape.pillarX, shape.beltY + 0.5))
+        ctx.stroke(pillar, with: .color(Color(base)), lineWidth: 1.7 * s)
+    }
+
+    func drawDetails() {
+        let belt: CGFloat = shape.beltY
+        let pillarX: CGFloat = shape.pillarX
+        let doorX: CGFloat = shape.frontDoorX
+
+        var doors = Path()
+        doors.move(to: P(pillarX, belt))
+        doors.addLine(to: P(pillarX - 0.6, 30.5))
+        doors.move(to: P(doorX, belt))
+        doors.addLine(to: P(doorX + 1.2, 25))
+        doors.addLine(to: P(doorX - 0.4, 30.5))
+        ctx.stroke(doors, with: .color(Color.black.opacity(0.25)), lineWidth: 0.35 * s)
+
+        for hx in [pillarX - 8, pillarX + 12] {
+            let handle = Path(roundedRect: R(hx, belt + 2.6, 3.4, 0.9), cornerRadius: 0.45 * s)
+            ctx.fill(handle, with: .color(Color.black.opacity(0.3)))
+        }
+
+        ctx.fill(Path(ellipseIn: R(doorX - 1.6, belt - 1.6, 3, 1.8)), with: .color(Color(base.shaded(0.75))))
+        let head = Path(roundedRect: R(shape.head.x, shape.head.y, 6, 1.9), cornerRadius: 0.9 * s)
+        ctx.fill(head, with: .color(Color(white: 0.93)))
+        let tail = Path(roundedRect: R(shape.tail.x, shape.tail.y, 3.4, 2.2), cornerRadius: 0.8 * s)
+        ctx.fill(tail, with: .color(Color(red: 0.85, green: 0.12, blue: 0.12)))
+    }
+
+    func circle(_ c: CGPoint, _ r: CGFloat) -> Path {
+        Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r))
+    }
+
+    func drawWheel(_ cx: CGFloat) {
+        let c: CGPoint = P(cx, shape.wheelY)
+        let r: CGFloat = shape.wheelR * s
+        let rr: CGFloat = r * 0.63
+        ctx.fill(circle(c, r), with: .color(Color(white: 0.09)))
+        let rim = Gradient(colors: [Color(white: 0.88), Color(white: 0.52)])
+        ctx.fill(circle(c, rr), with: .linearGradient(rim, startPoint: CGPoint(x: c.x, y: c.y - rr),
+                                                      endPoint: CGPoint(x: c.x, y: c.y + rr)))
+        var spokes = Path()
+        for i in 0..<5 {
+            let a: CGFloat = CGFloat(i) * 2 * .pi / 5 - .pi / 2
+            spokes.move(to: c)
+            spokes.addLine(to: CGPoint(x: c.x + rr * 0.92 * cos(a), y: c.y + rr * 0.92 * sin(a)))
+        }
+        ctx.stroke(spokes, with: .color(Color(white: 0.32)), lineWidth: 0.55 * s)
+        ctx.fill(circle(c, r * 0.14), with: .color(Color(white: 0.25)))
+    }
+}
 // Форма кузова: точки контура в системе 100 × 40
 private struct CarShape {
     let outline: [CGPoint]   // верх кузова: от заднего низа к переднему низу
